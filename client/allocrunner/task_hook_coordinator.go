@@ -16,18 +16,21 @@ type taskHookCoordinator struct {
 	// constant for quickly starting all prestart tasks
 	closedCh chan struct{}
 
+	// Each context is used to gate task runners launching the tasks. A task
+	// runner waits until the context associated its lifecycle context is
+	// done/cancelled.
 	mainTaskCtx       context.Context
 	mainTaskCtxCancel func()
 
 	poststartTaskCtx       context.Context
 	poststartTaskCtxCancel func()
-	poststopTaskCtx       context.Context
-	poststopTaskCtxCancel func()
+	poststopTaskCtx        context.Context
+	poststopTaskCtxCancel  context.CancelFunc
 
 	prestartSidecar   map[string]struct{}
 	prestartEphemeral map[string]struct{}
 	mainTasksPending  map[string]struct{}
-	poststopTasks          map[string]struct{}
+	poststopTasks     map[string]struct{}
 }
 
 func newTaskHookCoordinator(logger hclog.Logger, tasks []*structs.Task) *taskHookCoordinator {
@@ -46,11 +49,11 @@ func newTaskHookCoordinator(logger hclog.Logger, tasks []*structs.Task) *taskHoo
 		prestartSidecar:        map[string]struct{}{},
 		prestartEphemeral:      map[string]struct{}{},
 		mainTasksPending:       map[string]struct{}{},
-		poststopTasks:              map[string]struct{}{},
+		poststopTasks:          map[string]struct{}{},
 		poststartTaskCtx:       poststartTaskCtx,
 		poststartTaskCtxCancel: poststartCancelFn,
-		poststopTaskCtx:       poststopTaskCtx,
-		poststopTaskCtxCancel: poststopTaskCancelFn,
+		poststopTaskCtx:        poststopTaskCtx,
+		poststopTaskCtxCancel:  poststopTaskCancelFn,
 	}
 	c.setTasks(tasks)
 	return c
