@@ -144,7 +144,7 @@ func (c *taskHookCoordinator) taskStateUpdated(states map[string]*structs.TaskSt
 
 	for task := range c.mainTasksPending {
 		st := states[task]
-		if st == nil || !st.Successful() {
+		if st == nil || !st.Successful() || st.State == structs.TaskStateDead {
 			continue
 		}
 

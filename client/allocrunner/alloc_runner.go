@@ -523,6 +523,7 @@ func (ar *allocRunner) handleTaskStateUpdates() {
 			// prevent looping before TaskRunners have transitioned
 			// to Dead.
 			for _, tr := range liveRunners {
+				ar.logger.Info("killing task: ", tr.Task().Name)
 				select {
 				case <-tr.WaitCh():
 				case <-ar.waitCh:
@@ -574,7 +575,7 @@ func (ar *allocRunner) killTasks() map[string]*structs.TaskState {
 	// Kill the rest concurrently
 	wg := sync.WaitGroup{}
 	for name, tr := range ar.tasks {
-		if tr.IsLeader() {
+		if tr.IsLeader() || tr.IsPoststopTask() {
 			continue
 		}
 
