@@ -575,7 +575,7 @@ func (ar *allocRunner) killTasks() map[string]*structs.TaskState {
 	// Kill the rest concurrently
 	wg := sync.WaitGroup{}
 	for name, tr := range ar.tasks {
-		if tr.IsLeader() || tr.IsPoststopTask() {
+		if tr.IsLeader() {
 			continue
 		}
 
