@@ -31,7 +31,6 @@ type taskHookCoordinator struct {
 	prestartEphemeral map[string]struct{}
 	mainTasksRunning  map[string]struct{}  // poststop: main tasks running -> finished
 	mainTasksPending  map[string]struct{}  // poststart: main tasks pending -> running
-	poststopTasks     map[string]struct{}
 }
 
 func newTaskHookCoordinator(logger hclog.Logger, tasks []*structs.Task) *taskHookCoordinator {
@@ -51,7 +50,6 @@ func newTaskHookCoordinator(logger hclog.Logger, tasks []*structs.Task) *taskHoo
 		prestartEphemeral:      map[string]struct{}{},
 		mainTasksRunning:       map[string]struct{}{},
 		mainTasksPending:       map[string]struct{}{},
-		poststopTasks:          map[string]struct{}{},
 		poststartTaskCtx:       poststartTaskCtx,
 		poststartTaskCtxCancel: poststartCancelFn,
 		poststopTaskCtx:        poststopTaskCtx,
@@ -80,8 +78,7 @@ func (c *taskHookCoordinator) setTasks(tasks []*structs.Task) {
 		case structs.TaskLifecycleHookPoststart:
 			// Poststart hooks don't need to be tracked.
 		case structs.TaskLifecycleHookPoststop:
-			// TODO: we don't need to track poststop tasks
-			c.poststopTasks[task.Name] = struct{}{}
+			// Poststop hooks don't need to be tracked.
 		default:
 			c.logger.Error("invalid lifecycle hook", "task", task.Name, "hook", task.Lifecycle.Hook)
 		}
@@ -90,10 +87,6 @@ func (c *taskHookCoordinator) setTasks(tasks []*structs.Task) {
 	if !c.hasPrestartTasks() {
 		c.mainTaskCtxCancel()
 	}
-	if !c.hasRunningMainTasks() {
-		c.poststopTaskCtxCancel()
-	}
-
 }
 
 func (c *taskHookCoordinator) hasPrestartTasks() bool {
@@ -122,6 +115,8 @@ func (c *taskHookCoordinator) startConditionForTask(task *structs.Task) <-chan s
 	case structs.TaskLifecycleHookPoststop:
 		return c.poststopTaskCtx.Done()
 	default:
+		// it should never have a lifecycle stanza w/o a hook, so report an error but allow the task to start normally
+		c.logger.Error("invalid lifecycle hook", "task", task.Name, "hook", task.Lifecycle.Hook)
 		return c.mainTaskCtx.Done()
 	}
 }
@@ -133,6 +128,7 @@ func (c *taskHookCoordinator) taskStateUpdated(states map[string]*structs.TaskSt
 		if st == nil || st.StartedAt.IsZero() {
 			continue
 		}
+
 
 		delete(c.prestartSidecar, task)
 	}
@@ -148,22 +144,13 @@ func (c *taskHookCoordinator) taskStateUpdated(states map[string]*structs.TaskSt
 
 	for task := range c.mainTasksRunning {
 		st := states[task]
-		if st == nil || !st.Successful() || st.State == structs.TaskStateDead {
+
+		if st == nil || st.State != structs.TaskStateDead {
 			continue
 		}
 
 		delete(c.mainTasksRunning, task)
 	}
-
-	// TODO: delete
-	//for task := range c.poststopTasks {
-	//	st := states[task]
-	//	if st == nil || !st.Successful() {
-	//		continue
-	//	}
-	//
-	//	delete(c.poststopTasks, task)
-	//}
 
 	for task := range c.mainTasksPending {
 		st := states[task]

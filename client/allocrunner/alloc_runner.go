@@ -498,6 +498,8 @@ func (ar *allocRunner) handleTaskStateUpdates() {
 			killEvent = structs.NewTaskEvent(structs.TaskMainDead)
 		}
 
+
+
 		// If there's a kill event set and live runners, kill them
 		if killEvent != nil && len(liveRunners) > 0 {
 
