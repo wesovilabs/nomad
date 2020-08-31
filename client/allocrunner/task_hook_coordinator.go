@@ -129,7 +129,6 @@ func (c *taskHookCoordinator) taskStateUpdated(states map[string]*structs.TaskSt
 			continue
 		}
 
-
 		delete(c.prestartSidecar, task)
 	}
 
@@ -171,6 +170,10 @@ func (c *taskHookCoordinator) taskStateUpdated(states map[string]*structs.TaskSt
 	if !c.hasRunningMainTasks() {
 		c.poststopTaskCtxCancel()
 	}
+}
+
+func (c *taskHookCoordinator) StartPoststopTasks() {
+	c.poststopTaskCtxCancel()
 }
 
 // hasNonSidecarTasks returns false if all the passed tasks are sidecar tasks

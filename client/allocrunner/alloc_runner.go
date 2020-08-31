@@ -347,12 +347,26 @@ func (ar *allocRunner) shouldRun() bool {
 
 // runTasks is used to run the task runners and block until they exit.
 func (ar *allocRunner) runTasks() {
+	// Start all tasks
 	for _, task := range ar.tasks {
 		go task.Run()
 	}
 
+	// Block on all tasks except poststop tasks
 	for _, task := range ar.tasks {
-		<-task.WaitCh()
+		if !task.IsPoststopTask() {
+			<-task.WaitCh()
+		}
+	}
+
+	// Signal poststop tasks to proceed to main runtime
+	ar.taskHookCoordinator.StartPoststopTasks()
+
+	// Wait for poststop tasks to finish before proceeding
+	for _, task := range ar.tasks {
+		if task.IsPoststopTask() {
+			<-task.WaitCh()
+		}
 	}
 }
 
@@ -515,6 +529,9 @@ func (ar *allocRunner) handleTaskStateUpdates() {
 
 			// Emit kill event for live runners
 			for _, tr := range liveRunners {
+				if tr.IsPoststopTask() {
+					continue
+				}
 				tr.EmitEvent(killEvent)
 			}
 
@@ -577,7 +594,8 @@ func (ar *allocRunner) killTasks() map[string]*structs.TaskState {
 	// Kill the rest concurrently
 	wg := sync.WaitGroup{}
 	for name, tr := range ar.tasks {
-		if tr.IsLeader() {
+		// Filter out poststop tasks so they run after all the other tasks are killed
+		if tr.IsLeader() || tr.IsPoststopTask() {
 			continue
 		}
 
