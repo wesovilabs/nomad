@@ -485,7 +485,7 @@ func (tr *TaskRunner) Run() {
 
 	select {
 	case <-tr.startConditionMetCtx:
-		tr.logger.Debug("lifecycle start condition has been met, proceeding", "task", tr.task.Name)
+		tr.logger.Debug("lifecycle start condition has been met, proceeding")
 		// yay proceed
 	case <-tr.killCtx.Done():
 	case <-tr.shutdownCtx.Done():
@@ -627,6 +627,7 @@ func (tr *TaskRunner) shouldShutdown() bool {
 
 	return false
 }
+
 // handleTaskExitResult handles the results returned by the task exiting. If
 // retryWait is true, the caller should attempt to wait on the task again since
 // it has not actually finished running. This can happen if the driver plugin
