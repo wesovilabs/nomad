@@ -487,6 +487,10 @@ func (ar *allocRunner) handleTaskStateUpdates() {
 			state := tr.TaskState()
 			states[name] = state
 
+			if tr.IsPoststopTask() {
+				continue
+			}
+
 			// Capture live task runners in case we need to kill them
 			if state.State != structs.TaskStateDead {
 				liveRunners = append(liveRunners, tr)
@@ -512,8 +516,6 @@ func (ar *allocRunner) handleTaskStateUpdates() {
 			killEvent = structs.NewTaskEvent(structs.TaskMainDead)
 		}
 
-
-
 		// If there's a kill event set and live runners, kill them
 		if killEvent != nil && len(liveRunners) > 0 {
 
@@ -529,9 +531,6 @@ func (ar *allocRunner) handleTaskStateUpdates() {
 
 			// Emit kill event for live runners
 			for _, tr := range liveRunners {
-				if tr.IsPoststopTask() {
-					continue
-				}
 				tr.EmitEvent(killEvent)
 			}
 
