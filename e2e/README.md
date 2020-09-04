@@ -4,16 +4,9 @@ This package contains integration tests. Unlike tests alongside Nomad code,
 these tests expect there to already be a functional Nomad cluster accessible
 (either on localhost or via the `NOMAD_ADDR` env var).
 
+See [`framework/doc.go`](framework/doc.go) for how to write tests.
+
 The `NOMAD_E2E=1` environment variable must be set for these tests to run.
-
-## Local Nomad Development
-
-When developing tests locally, provisioning is not required when only the tests
-change. See [`framework/doc.go`](framework/doc.go) for how to write tests.
-
-When making changes to the Nomad agent itself, use `./bin/update $(which nomad)
-/usr/local/bin/nomad` and `./bin/run sudo systemctl restart nomad` to
-destructively modify the provisioned cluster.
 
 ## Provisioning Test Infrastructure on AWS
 
@@ -24,6 +17,18 @@ which e2e tests will run. See the
 for details. The number of servers and clients is configurable, as is the
 specific build of Nomad to deploy and the configuration file for each client
 and server.
+
+## Provisioning Local Clusters
+
+To run tests against a local cluster, you'll need to make sure the following
+environment variables are set:
+
+* `NOMAD_ADDR` should point to one of the Nomad servers
+* `CONSUL_HTTP_ADDR` should point to one of the Consul servers
+* `NOMAD_E2E=1`
+
+_TODO: the scripts in `./bin` currently work only with Terraform, it would be
+nice for us to have a way to deploy Nomad to Vagrant or local clusters._
 
 ## Running
 
@@ -109,4 +114,4 @@ Use the `"custom"` profile as described above.
 You can update the `nomad_sha` or `nomad_version` variables, or simply rebuild
 the binary you have at the `nomad_local_binary` path so that Terraform picks
 up the changes. Then run `terraform plan`/`terraform apply` again. This will
-update Nomad in place, making the minimum amount of changes neccessary.
+update Nomad in place, making the minimum amount of changes necessary.
