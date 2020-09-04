@@ -7,7 +7,7 @@
       "instance_type": "t2.medium",
       "ssh_username": "ubuntu",
       "iam_instance_profile": "packer_build",
-      "ami_name": "nomad-e2e-{{timestamp}}",
+      "ami_name": "test-nomad-e2e-{{timestamp}}",
       "tags": {
         "OS": "Ubuntu"
       }
