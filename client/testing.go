@@ -46,7 +46,7 @@ func TestClient(t testing.T, cb func(c *config.Config)) (*Client, func() error) 
 	}
 	catalog := consul.NewMockCatalog(logger)
 	mockService := consulApi.NewMockConsulServiceClient(t, logger)
-	client, err := NewClient(conf, catalog, mockService)
+	client, err := NewClient(conf, catalog, nil, mockService)
 	if err != nil {
 		cleanup()
 		t.Fatalf("err: %v", err)

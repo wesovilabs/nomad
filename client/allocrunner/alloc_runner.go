@@ -64,6 +64,10 @@ type allocRunner struct {
 	// registering services and checks
 	consulClient consul.ConsulServiceAPI
 
+	// consulProxiesClient is the client used by the envoy version hook for
+	// looking up supported envoy versions of the consul agent.
+	consulProxiesClient consul.SupportedProxiesAPI
+
 	// sidsClient is the client used by the service identity hook for
 	// managing SI tokens
 	sidsClient consul.ServiceIdentityAPI
@@ -186,6 +190,7 @@ func NewAllocRunner(config *Config) (*allocRunner, error) {
 		alloc:                    alloc,
 		clientConfig:             config.ClientConfig,
 		consulClient:             config.Consul,
+		consulProxiesClient:      nil, // todo
 		sidsClient:               config.ConsulSI,
 		vaultClient:              config.Vault,
 		tasks:                    make(map[string]*taskrunner.TaskRunner, len(tg.Tasks)),
@@ -246,6 +251,7 @@ func (ar *allocRunner) initTaskRunners(tasks []*structs.Task) error {
 			StateUpdater:         ar,
 			DynamicRegistry:      ar.dynamicRegistry,
 			Consul:               ar.consulClient,
+			ConsulProxies:        nil, // todo
 			ConsulSI:             ar.sidsClient,
 			Vault:                ar.vaultClient,
 			DeviceStatsReporter:  ar.deviceStatsReporter,
