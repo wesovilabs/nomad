@@ -74,8 +74,8 @@ type Agent struct {
 	// and checks.
 	consulService *consul.ServiceClient
 
-	// consulAgent is the subset of Consul's Agent API Nomad uses.
-	consulAgent *consul.ConnectProxies
+	// consulProxies is the subset of Consul's Agent API Nomad uses.
+	consulProxies *consul.ConnectProxies
 
 	// consulCatalog is the subset of Consul's Catalog API Nomad uses.
 	consulCatalog consul.CatalogAPI
@@ -848,11 +848,11 @@ func (a *Agent) setupClient() error {
 		conf.StateDBFactory = state.GetStateDBFactory(conf.DevMode)
 	}
 
-	client, err := client.NewClient(conf, a.consulCatalog, a.consulAgent, a.consulService)
+	nomadClient, err := client.NewClient(conf, a.consulCatalog, a.consulProxies, a.consulService)
 	if err != nil {
 		return fmt.Errorf("client setup failed: %v", err)
 	}
-	a.client = client
+	a.client = nomadClient
 
 	// Create the Nomad Client  services for Consul
 	if *a.config.Consul.AutoAdvertise {
@@ -1145,7 +1145,7 @@ func (a *Agent) setupConsul(consulConfig *config.ConsulConfig) error {
 	// Create Consul Agent client for looking info about the agent.
 	consulAgentClient := consulClient.Agent()
 	a.consulService = consul.NewServiceClient(consulAgentClient, a.logger, isClient)
-	a.consulAgent = consul.NewConnectProxiesClient(consulAgentClient)
+	a.consulProxies = consul.NewConnectProxiesClient(consulAgentClient)
 
 	// Run the Consul service client's sync'ing main loop
 	go a.consulService.Run()

@@ -2,11 +2,13 @@ package taskrunner
 
 import (
 	"context"
+	"fmt"
 
 	hclog "github.com/hashicorp/go-hclog"
 	ifs "github.com/hashicorp/nomad/client/allocrunner/interfaces"
 	"github.com/hashicorp/nomad/client/consul"
 	"github.com/hashicorp/nomad/nomad/structs"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -38,14 +40,19 @@ type envoyVersionHook struct {
 	// alloc is the allocation with the envoy task being rewritten.
 	alloc *structs.Allocation
 
+	// proxiesClient is the subset of the Consul API for getting information
+	// from Consul about the versions of Envoy it supports.
+	proxiesClient consul.SupportedProxiesAPI
+
 	// logger is used to log things.
 	logger hclog.Logger
 }
 
 func newEnvoyVersionHook(c *envoyVersionHookConfig) *envoyVersionHook {
 	return &envoyVersionHook{
-		alloc:  c.alloc,
-		logger: c.logger.Named(envoyVersionHookName),
+		alloc:         c.alloc,
+		proxiesClient: c.proxiesClient,
+		logger:        c.logger.Named(envoyVersionHookName),
 	}
 }
 
@@ -57,14 +64,31 @@ func (envoyVersionHook) Name() string {
 //  which is going to involve image, meta, consul version, consul api response
 
 func (h *envoyVersionHook) Prestart(ctx context.Context, request *ifs.TaskPrestartRequest, response *ifs.TaskPrestartResponse) error {
+	fmt.Println("EVH Prestart")
+
 	if h.skip(request) {
+		fmt.Println("skip is true")
 		response.Done = true
 		return nil
 	}
 
-	// it's either legcay or managable, need to know consul version
+	fmt.Println("skip is false")
 
-	return nil
+	// it's either legcay or managable, need to know consul version
+	proxies, err := h.proxiesClient.Proxies()
+	if err != nil {
+		return err
+	}
+
+	if proxies == nil {
+		fmt.Println("proxies result is nil, use fallback")
+	} else {
+		fmt.Println("proxies:", proxies)
+	}
+
+	// todo obvious
+	response.Done = true
+	return errors.New("not yet finished")
 }
 
 // skip will return true if the request does not contain a task that should have

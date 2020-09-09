@@ -312,7 +312,7 @@ func NewTaskRunner(config *Config) (*TaskRunner, error) {
 		envBuilder:           envBuilder,
 		dynamicRegistry:      config.DynamicRegistry,
 		consulServiceClient:  config.Consul,
-		consulProxiesClient:  nil, // todo
+		consulProxiesClient:  config.ConsulProxies,
 		siClient:             config.ConsulSI,
 		vaultClient:          config.Vault,
 		state:                tstate,

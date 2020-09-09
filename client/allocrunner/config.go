@@ -34,7 +34,7 @@ type Config struct {
 
 	// ConsulProxies is the Consul client used to lookup supported envoy versions
 	// of the Consul agent.
-	ConsulProxies consul.ConsulServiceAPI
+	ConsulProxies consul.SupportedProxiesAPI
 
 	// ConsulSI is the Consul client used to manage service identity tokens.
 	ConsulSI consul.ServiceIdentityAPI
