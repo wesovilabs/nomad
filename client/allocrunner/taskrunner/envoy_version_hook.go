@@ -65,19 +65,11 @@ func (envoyVersionHook) Name() string {
 	return envoyVersionHookName
 }
 
-// todo: determine what version of envoy to run
-//  which is going to involve image, meta, consul version, consul api response
-
 func (h *envoyVersionHook) Prestart(ctx context.Context, request *ifs.TaskPrestartRequest, response *ifs.TaskPrestartResponse) error {
-	fmt.Println("EVH Prestart")
-
 	if h.skip(request) {
-		fmt.Println("skip is true")
 		response.Done = true
 		return nil
 	}
-
-	fmt.Println("skip is false")
 
 	// it's either legacy or manageable, need to know consul version
 	proxies, err := h.proxiesClient.Proxies()
@@ -90,11 +82,8 @@ func (h *envoyVersionHook) Prestart(ctx context.Context, request *ifs.TaskPresta
 		return err
 	}
 
-	fmt.Println("using envoy image:", image)
-	// patch the alloc?
-	// can i just do this?
+	h.logger.Trace("setting task envoy image", "image", image)
 	request.Task.Config["image"] = image
-
 	response.Done = true
 	return nil
 }
@@ -103,7 +92,7 @@ func (h *envoyVersionHook) Prestart(ctx context.Context, request *ifs.TaskPresta
 // its envoy proxy version resolved automatically.
 func (h *envoyVersionHook) skip(request *ifs.TaskPrestartRequest) bool {
 	switch {
-	case request.Task.Driver != "docker": // we only manage docker
+	case request.Task.Driver != "docker":
 		return true
 	case !request.Task.UsesConnectSidecar():
 		return true
@@ -113,6 +102,9 @@ func (h *envoyVersionHook) skip(request *ifs.TaskPrestartRequest) bool {
 	return false
 }
 
+// isSentinel returns true if the docker.config.image value has been left to
+// Nomad's default sentinel value, indicating that Nomad and Consul should work
+// together to determine the best Envoy version to use.
 func (_ *envoyVersionHook) isSentinel(config map[string]interface{}) bool {
 	if len(config) == 0 {
 		return false
@@ -126,6 +118,8 @@ func (_ *envoyVersionHook) isSentinel(config map[string]interface{}) bool {
 	return image == structs.ConnectEnvoySentinel
 }
 
+// image determines the best Envoy version to use. if supported is nil or empty
+// Nomad will fallback to the legacy envoy image used before Nomad v1.0.
 func (_ *envoyVersionHook) image(supported map[string][]string) (string, error) {
 	versions := supported["envoy"]
 	if len(versions) == 0 {

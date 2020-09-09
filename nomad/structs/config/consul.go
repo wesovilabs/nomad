@@ -121,10 +121,6 @@ type ConsulConfig struct {
 
 	// ExtraKeysHCL is used by hcl to surface unexpected keys
 	ExtraKeysHCL []string `hcl:",unusedKeys" json:"-"`
-
-	// ConnectSidecars is used to determine how the envoy version and its docker
-	// image are resolved.
-	ConnectSidecars ConnectSidecarConfig `hcl:"connect_sidecars"`
 }
 
 // DefaultConsulConfig() returns the canonical defaults for the Nomad
@@ -151,12 +147,6 @@ func DefaultConsulConfig() *ConsulConfig {
 		EnableSSL: helper.BoolToPtr(def.Scheme == "https"),
 		VerifySSL: helper.BoolToPtr(!def.TLSConfig.InsecureSkipVerify),
 		CAFile:    def.TLSConfig.CAFile,
-
-		// Default behavior is the easy mode where the latest envoy image
-		// compatible with the local consul agent is automatically pulled.
-		ConnectSidecars: ConnectSidecarConfig{
-			PullOnDemand: helper.BoolToPtr(true),
-		},
 	}
 }
 
