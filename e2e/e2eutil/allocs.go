@@ -11,6 +11,24 @@ import (
 	"github.com/hashicorp/nomad/testutil"
 )
 
+type WaitConfig struct {
+	Interval time.Duration
+	Retries  int64
+}
+
+func (wc *WaitConfig) OrDefault() (time.Duration, int64) {
+	if wc == nil {
+		return time.Millisecond * 100, 50
+	}
+	if wc.Interval == 0 {
+		wc.Interval = time.Millisecond * 100
+	}
+	if wc.Retries == 0 {
+		wc.Retries = 50
+	}
+	return wc.Interval, wc.Retries
+}
+
 // WaitForAllocStatusExpected polls 'nomad job status' and exactly compares
 // the status of all allocations (including any previous versions) against the
 // expected list.
@@ -18,16 +36,18 @@ func WaitForAllocStatusExpected(jobID string, expected []string) error {
 	return WaitForAllocStatusComparison(
 		func() ([]string, error) { return AllocStatuses(jobID) },
 		func(got []string) bool { return reflect.DeepEqual(got, expected) },
+		nil,
 	)
 }
 
 // WaitForAllocStatusComparison is a convenience wrapper that polls the query
 // function until the comparison function returns true.
-func WaitForAllocStatusComparison(query func() ([]string, error), comparison func([]string) bool) error {
+func WaitForAllocStatusComparison(query func() ([]string, error), comparison func([]string) bool, wc *WaitConfig) error {
 	var got []string
 	var err error
-	testutil.WaitForResultRetries(30, func() (bool, error) {
-		time.Sleep(time.Millisecond * 100)
+	interval, retries := wc.OrDefault()
+	testutil.WaitForResultRetries(retries, func() (bool, error) {
+		time.Sleep(interval)
 		got, err = query()
 		if err != nil {
 			return false, err
@@ -39,12 +59,14 @@ func WaitForAllocStatusComparison(query func() ([]string, error), comparison fun
 	return err
 }
 
-// AllocStatuses returns a slice of client statuses
-func AllocStatuses(jobID string) ([]string, error) {
+// AllocsForJob returns a slice of key->value maps, each describing the values
+// of the 'nomad job status' Allocations section (not actual
+// structs.Allocation objects, query the API if you want those)
+func AllocsForJob(jobID string) ([]map[string]string, error) {
 
 	out, err := Command("nomad", "job", "status", "-verbose", "-all-allocs", jobID)
 	if err != nil {
-		return nil, fmt.Errorf("nomad job status failed: %w", err)
+		return nil, fmt.Errorf("'nomad job status' failed: %w", err)
 	}
 
 	section, err := GetSection(out, "Allocations")
@@ -55,6 +77,38 @@ func AllocStatuses(jobID string) ([]string, error) {
 	allocs, err := ParseColumns(section)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse Allocations section: %w", err)
+	}
+	return allocs, nil
+}
+
+// AllocsForNode returns a slice of key->value maps, each describing the values
+// of the 'nomad node status' Allocations section (not actual
+// structs.Allocation objects, query the API if you want those)
+func AllocsForNode(nodeID string) ([]map[string]string, error) {
+
+	out, err := Command("nomad", "node", "status", "-verbose", nodeID)
+	if err != nil {
+		return nil, fmt.Errorf("'nomad node status' failed: %w", err)
+	}
+
+	section, err := GetSection(out, "Allocations")
+	if err != nil {
+		return nil, fmt.Errorf("could not find Allocations section: %w", err)
+	}
+
+	allocs, err := ParseColumns(section)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse Allocations section: %w", err)
+	}
+	return allocs, nil
+}
+
+// AllocStatuses returns a slice of client statuses
+func AllocStatuses(jobID string) ([]string, error) {
+
+	allocs, err := AllocsForJob(jobID)
+	if err != nil {
+		return nil, err
 	}
 
 	statuses := []string{}
